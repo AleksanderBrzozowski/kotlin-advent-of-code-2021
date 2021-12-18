@@ -9,6 +9,7 @@ private fun part2() {
     check(testResult == 1134)
     val input = readInput("Day09")
     val result = input.threeLargestBasins().fold(1) { acc: Int, i: Int -> acc * i }
+    println("Multiplication of three largest basins is : $result")
 }
 
 private fun part1() {
@@ -38,7 +39,6 @@ private fun List<List<Int>>.threeLargestBasins(): List<Int> =
                 return@mapIndexedNotNull null
             }
 
-            println("lowest point found")
             basinsLocationsPositions(rowIndex = rowIndex, columnIndex = columnIndex).size
         }
     }
@@ -55,20 +55,19 @@ private fun List<List<Int>>.adjacentLocationsPositions(rowIndex: Int, columnInde
 private fun List<List<Int>>.basinsLocationsPositions(
     rowIndex: Int,
     columnIndex: Int,
-    visitedPoints: Set<Pair<Int, Int>> = emptySet()
+    visitedPoints: MutableSet<Pair<Int, Int>> = mutableSetOf()
 ): Set<Pair<Int, Int>> {
     if (this[rowIndex][columnIndex] == 9) {
         return emptySet()
     }
-    println("${rowIndex to columnIndex}, $visitedPoints")
+    visitedPoints.add(rowIndex to columnIndex)
     return adjacentLocationsPositions(rowIndex, columnIndex)
         .filterNot { visitedPoints.contains(it) }
         .flatMapTo(mutableSetOf()) { (r, c) ->
-            println("flatMap -> ${r to c}, $visitedPoints")
             basinsLocationsPositions(
                 rowIndex = r,
                 columnIndex = c,
-                visitedPoints = visitedPoints + (rowIndex to columnIndex)
+                visitedPoints = visitedPoints
             )
         } + setOf(rowIndex to columnIndex)
 }
