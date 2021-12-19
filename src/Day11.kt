@@ -21,11 +21,10 @@ private fun part2() {
     println("First step in which octopuses flash simultaneously: $result")
 }
 
-private typealias Matrix = MutableList<MutableList<Int>>
-
 private class DumboOctopus(input: List<List<Int>>) {
 
-    private val octopuses: Matrix = input.map { it.toMutableList() }.toMutableList()
+    private val octopuses: MutableList<MutableList<Int>> =
+        input.map { it.toMutableList() }.toMutableList()
 
     fun flashesAfterNumberOfSteps(steps: Int): Int {
         var countOfFlashedOctopuses = 0
@@ -51,7 +50,7 @@ private class DumboOctopus(input: List<List<Int>>) {
         throw Error("Unreachable")
     }
 
-    private fun Matrix.increaseEnergyLevelOfEachOctopus(): List<Pair<Int, Int>> =
+    private fun MutableList<MutableList<Int>>.increaseEnergyLevelOfEachOctopus(): List<Pair<Int, Int>> =
         octopuses.flatMapIndexed { rowIndex, rows ->
             rows.mapIndexedNotNull { columnIndex, _ ->
                 val hasFlashed = octopuses.increaseEnergyLevel(rowIndex to columnIndex)
@@ -59,7 +58,9 @@ private class DumboOctopus(input: List<List<Int>>) {
             }
         }
 
-    private fun Matrix.increaseEnergyLevelOfAdjacent(positionsOfOctopusesThatFlashedInPreviousStep: List<Pair<Int, Int>>): List<Pair<Int, Int>> {
+    private fun MutableList<MutableList<Int>>.increaseEnergyLevelOfAdjacent(
+        positionsOfOctopusesThatFlashedInPreviousStep: List<Pair<Int, Int>>
+    ): List<Pair<Int, Int>> {
         return positionsOfOctopusesThatFlashedInPreviousStep.flatMap { (row, column) ->
             val positionsToIncreaseEnergyLevel = octopuses.adjacentThatNotFlashedInCurrentStep(row to column)
             positionsToIncreaseEnergyLevel.mapNotNull { position ->
@@ -70,7 +71,7 @@ private class DumboOctopus(input: List<List<Int>>) {
     }
 
     // returns if it flashed
-    private fun Matrix.increaseEnergyLevel(position: Pair<Int, Int>): Boolean {
+    private fun MutableList<MutableList<Int>>.increaseEnergyLevel(position: Pair<Int, Int>): Boolean {
         if (this[position] == 9) {
             this[position] = 0
             return true
@@ -79,7 +80,9 @@ private class DumboOctopus(input: List<List<Int>>) {
         return false
     }
 
-    private fun Matrix.adjacentThatNotFlashedInCurrentStep(position: Pair<Int, Int>): List<Pair<Int, Int>> {
+    private fun MutableList<MutableList<Int>>.adjacentThatNotFlashedInCurrentStep(
+        position: Pair<Int, Int>
+    ): List<Pair<Int, Int>> {
         val (r, c) = position
         return (-1..1).flatMap { row -> (-1..1).map { column -> (r + row) to (c + column) } }
             .filter { it.isNotOutOfBounds() && it != position && this[it] != 0 }
@@ -90,12 +93,15 @@ private class DumboOctopus(input: List<List<Int>>) {
         return row > -1 && column > -1 && row < octopuses.size && column < octopuses[0].size
     }
 
-    private operator fun Matrix.get(position: Pair<Int, Int>): Int {
+    private operator fun MutableList<MutableList<Int>>.get(position: Pair<Int, Int>): Int {
         val (row, column) = position
         return this[row][column]
     }
 
-    private operator fun Matrix.set(position: Pair<Int, Int>, value: Int) {
+    private operator fun MutableList<MutableList<Int>>.set(
+        position: Pair<Int, Int>,
+        value: Int
+    ) {
         val (row, column) = position
         this[row][column] = value
     }

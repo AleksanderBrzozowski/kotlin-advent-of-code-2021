@@ -49,10 +49,8 @@ private fun readGraph(file: String): Graph = readStringInput(file)
     .map { val (start, end) = it.split("-"); start to end }
     .let { Graph(it) }
 
-private typealias AdjacentByPoints = Map<String, List<String>>
-
 class Graph(input: List<Pair<String, String>>) {
-    private val adjacentByPoints: AdjacentByPoints =
+    private val adjacentByPoints: Map<String, List<String>> =
         input.fold(emptyMap()) { adjacentByPoints, (v1, v2) ->
             val v1Adjacent = (adjacentByPoints[v1] ?: emptyList()) + v2
             val v2Adjacent = (adjacentByPoints[v2] ?: emptyList()) + v1
@@ -107,7 +105,7 @@ class Graph(input: List<Pair<String, String>>) {
         else -> this + (point to count + 1)
     }
 
-    private fun AdjacentByPoints.start(): Pair<String, List<String>> =
+    private fun Map<String, List<String>>.start(): Pair<String, List<String>> =
         entries
             .first { (point, _) -> point.toVertexType() == START }
             .toPair()
