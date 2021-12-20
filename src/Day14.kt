@@ -6,41 +6,61 @@ fun main() {
 private fun part1() {
     val (testPolymerTemplate, testPairInsertionRules) = readInput("Day14_test")
     val testResult = testPolymerTemplate.apply(testPairInsertionRules, steps = 10)
-    check(testResult.length == 3073)
-    val (testLeastCommon, testMostCommon) = testResult.occurrences()
+    val (testLeastCommon, testMostCommon) = testResult.occurrences(testPolymerTemplate)
     check(testMostCommon - testLeastCommon == 1588L)
     val (polymerTemplate, pairInsertionRules) = readInput("Day14")
     val result = polymerTemplate.apply(pairInsertionRules, steps = 10)
-    val (lestCommon, mostCommon) = result.occurrences()
-    println("Subtraction of most common and least common is: ${mostCommon - lestCommon}")
+    val (leastCommon, mostCommon) = result.occurrences(polymerTemplate)
+    println("Subtraction of most common and least common is: ${mostCommon - leastCommon}")
+    check(mostCommon - leastCommon == 2584L)
 }
 
 private fun part2() {
     val (testPolymerTemplate, testPairInsertionRules) = readInput("Day14_test")
     val testResult = testPolymerTemplate.apply(testPairInsertionRules, steps = 40)
-    val (testLeastCommon, testMostCommon) = testResult.occurrences()
+    val (testLeastCommon, testMostCommon) = testResult.occurrences(testPolymerTemplate)
     check(testMostCommon - testLeastCommon == 2188189693529L)
     val (polymerTemplate, pairInsertionRules) = readInput("Day14")
     val result = polymerTemplate.apply(pairInsertionRules, steps = 40)
-    val (lestCommon, mostCommon) = result.occurrences()
+    val (lestCommon, mostCommon) = result.occurrences(polymerTemplate)
     println("Subtraction of most common and least common is: ${mostCommon - lestCommon}")
 }
 
-private fun String.occurrences(): Pair<Long, Long> {
-    val numberOfOccurrencesByLetter = groupingBy { it }.fold(0L) { acc, _ -> acc + 1 }
-    val leastCommon = numberOfOccurrencesByLetter.minOf { (_, occurrences) -> occurrences }
-    val mostCommon = numberOfOccurrencesByLetter.maxOf { (_, occurrences) -> occurrences }
+private fun Map<Pair<Char, Char>, Long>.occurrences(polymer: String): Pair<Long, Long> {
+    var letterOccurrences = this
+        .flatMap { (pair, occurrences) ->
+            val (a, _) = pair
+            listOf(a to occurrences)
+        }
+        .groupingBy { (letter, _) -> letter }
+        .fold(0L) { totalOccurrences, (_, occurrences) -> totalOccurrences + occurrences }
+    // ugly hack, after 10 steps and after 40 steps, we need to add + 1 to last letter (because it is not counted)
+    letterOccurrences = letterOccurrences + (polymer.last() to (letterOccurrences[polymer.last()]!! + 1))
+    val leastCommon = letterOccurrences.minOf { (_, occurrences) -> occurrences }
+    val mostCommon = letterOccurrences.maxOf { (_, occurrences) -> occurrences }
     return leastCommon to mostCommon
 }
 
-private fun String.apply(insertionRules: Map<Pair<Char, Char>, Char>, steps: Int): String {
-    return (1..steps).fold(this.map { it }) { polymer, _ ->
-        polymer.windowed(2)
-            .flatMapIndexed { index, (a, b) ->
+private fun String.apply(insertionRules: Map<Pair<Char, Char>, Char>, steps: Int): Map<Pair<Char, Char>, Long> {
+    val numberOfOccurrencesByPair: MutableMap<Pair<Char, Char>, Long> = this
+        .map { it }
+        .windowed(2)
+        .groupingBy { (a, b) -> a to b }
+        .foldTo(mutableMapOf(), 0L) { accumulator, _ -> accumulator + 1 }
+
+    repeat(steps) {
+        numberOfOccurrencesByPair
+            .toMap()
+            .forEach { (a, b), occurrences ->
+                if (occurrences < 1) return@forEach
                 val result = insertionRules[a to b] ?: throw Error("No insertion rule found for $a$b")
-                if (index != polymer.size - 2) listOf(a, result) else listOf(a, result, b)
+                numberOfOccurrencesByPair[a to b] = numberOfOccurrencesByPair[a to b]!! - occurrences
+                numberOfOccurrencesByPair[a to result] = (numberOfOccurrencesByPair[a to result] ?: 0) + occurrences
+                numberOfOccurrencesByPair[result to b] = (numberOfOccurrencesByPair[result to b] ?: 0) + occurrences
             }
-    }.joinToString(separator = "")
+    }
+
+    return numberOfOccurrencesByPair
 }
 
 private fun readInput(file: String): Pair<String, Map<Pair<Char, Char>, Char>> {
