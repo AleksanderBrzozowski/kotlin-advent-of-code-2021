@@ -5,48 +5,49 @@ fun main() {
 private fun part1() {
     val testInput = readInput("Day15_test")
     val testResult = testInput.totalRiskOfLowestRiskPath()
-    check(testResult == 40)
+    check(testResult == 40L)
     val input = readInput("Day15")
     val result = input.totalRiskOfLowestRiskPath()
     println("Part 1 result: $result")
 }
 
 private data class Matrix(val raw: List<List<Int>>) {
+    private val table: MutableMap<Pair<Int, Int>, DjikstraData> = raw.foldIndexed(mutableMapOf()) { x, table, columns ->
+        columns.forEachIndexed { y, _ ->
+            table[x to y] = DjikstraData(known = false, cost = Long.MAX_VALUE, path = null)
+        }
+        table
+    }
     private val lastIndexX = raw.lastIndex
     private val lastIndexY = raw[0].lastIndex
 
-    fun totalRiskOfLowestRiskPath(): Int {
-        var lowestTotalRiskByPath = dummyTotalRiskByPath()
-        val startingPossibleResults = (0 to 0).neighbours().map { (x, y) -> setOf(0 to 0, x to y) to raw[x to y] }
-        val possibleResults = ArrayDeque(startingPossibleResults)
-        while (possibleResults.isNotEmpty()) {
-            val (possibleBestPath, totalRisk) = possibleResults.removeLast()
-            val (_, lowestTotalRisk) = lowestTotalRiskByPath
-            possibleBestPath.last()
-                .neighbours()
-                .filter { it !in possibleBestPath }
-                .forEach { (x, y) ->
-                    val risk = totalRisk + raw[x to y]
-                    if (risk >= lowestTotalRisk) {
-                        return@forEach
-                    }
-                    val path = possibleBestPath + (x to y)
-                    if (x == lastIndexX && y == lastIndexY) {
-                        lowestTotalRiskByPath = path to risk
-                        return@forEach
-                    }
-                    possibleResults.add(path to risk)
-                }
+    fun totalRiskOfLowestRiskPath(): Long {
+        val start = 0 to 0
+        table[start] = table[start]!!.copy(known = true, cost = 0)
+        start.updateCosts(neighbours = start.neighbours())
+
+        while (table.anyUnknown()) {
+            val from = table.cheapestUnknownVertex()
+            from.updateCosts(neighbours = from.neighbours())
+            table[from] = table[from]!!.copy(known = true)
         }
-        val (_, lowestRisk) = lowestTotalRiskByPath
-        return lowestRisk
+
+        return table[lastIndexX to lastIndexY]!!.cost
     }
 
-    private fun dummyTotalRiskByPath(): Pair<Set<Pair<Int, Int>>, Int> {
-        val path =
-            (raw.mapIndexed { index, _ -> index to 0 } + raw.last().mapIndexed { index, _ -> raw.lastIndex to index })
-        val risk = path.sumOf { raw[it] }
-        return path.toSet() to risk
+    private fun Pair<Int, Int>.updateCosts(neighbours: List<Pair<Int, Int>>) {
+        val startCost = table[this]!!.cost
+        neighbours.forEach { vertex ->
+            val cost = vertex.cost().toLong() + startCost
+            if (table[vertex]!!.cost > cost) {
+                table[vertex] = table[vertex]!!.copy(cost = cost, path = this)
+            }
+        }
+    }
+
+    private fun Pair<Int, Int>.cost(): Int {
+        val (x, y) = this
+        return raw[x][y]
     }
 
     private fun Pair<Int, Int>.neighbours(): List<Pair<Int, Int>> {
@@ -54,6 +55,18 @@ private data class Matrix(val raw: List<List<Int>>) {
         return (listOf(-1, 1).map { r -> (x + r) to y } + listOf(-1, 1).map { c -> x to (y + c) })
             .filter { (x, y) -> x > -1 && x <= lastIndexX && y > -1 && y <= lastIndexY }
     }
+
+    private fun Map<Pair<Int, Int>, DjikstraData>.anyUnknown() = !values.all { it.known }
+
+    private fun Map<Pair<Int, Int>, DjikstraData>.cheapestUnknownVertex(): Pair<Int, Int> {
+        return entries.first { (_, data) -> !data.known }.key
+    }
+
+    private data class DjikstraData(
+        val known: Boolean,
+        val cost: Long,
+        val path: Pair<Int, Int>?
+    )
 
     private operator fun List<List<Int>>.get(pair: Pair<Int, Int>): Int = raw[pair.first][pair.second]
 }
