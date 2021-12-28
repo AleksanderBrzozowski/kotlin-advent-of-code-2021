@@ -1,5 +1,9 @@
+import kotlin.math.abs
+
 fun main() {
     part1()
+    part2PrepareData()
+    part2()
 }
 
 private fun part1() {
@@ -9,6 +13,21 @@ private fun part1() {
     val input = readInput("Day15")
     val result = input.totalRiskOfLowestRiskPath()
     println("Part 1 result: $result")
+}
+
+private fun part2PrepareData() {
+    val expectedInput = readInput("Day15_test2")
+    val input = readInput("Day15_test").toPart2()
+    check(expectedInput.raw == input.raw)
+}
+
+private fun part2() {
+    val testInput = readInput("Day15_test").toPart2()
+    val testResult = testInput.totalRiskOfLowestRiskPath()
+    check(testResult == 315L)
+    val input = readInput("Day15").toPart2()
+    val result = input.totalRiskOfLowestRiskPath()
+    println("Part 2 result: $result")
 }
 
 private data class Matrix(val raw: List<List<Int>>) {
@@ -69,6 +88,15 @@ private data class Matrix(val raw: List<List<Int>>) {
     )
 
     private operator fun List<List<Int>>.get(pair: Pair<Int, Int>): Int = raw[pair.first][pair.second]
+
+    fun toPart2(): Matrix = (0 until (lastIndexX + 1) * 5).map { x ->
+        (0 until (lastIndexY + 1) * 5).map { y ->
+            val increase = x / (lastIndexX + 1) + y / (lastIndexY + 1)
+            val originalValue = raw[x % (lastIndexX + 1)][y % (lastIndexX + 1)]
+            val newValue = originalValue + increase
+            if (newValue > 9) abs(9 - newValue) else newValue
+        }
+    }.let { Matrix(it) }
 }
 
 private fun readInput(file: String): Matrix = readStringInput(file)
