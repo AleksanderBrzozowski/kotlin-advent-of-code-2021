@@ -1,4 +1,6 @@
+import java.util.PriorityQueue
 import kotlin.math.abs
+import kotlin.time.ExperimentalTime
 
 fun main() {
     part1()
@@ -37,18 +39,27 @@ private data class Matrix(val raw: List<List<Int>>) {
         }
         table
     }
+    private val cheapestUnknownVertices: PriorityQueue<Pair<Pair<Int, Int>, Long>> =
+        PriorityQueue { (_, cost1), (_, cost2) -> cost1.compareTo(cost2) }
     private val lastIndexX = raw.lastIndex
     private val lastIndexY = raw[0].lastIndex
 
+    @OptIn(ExperimentalTime::class)
     fun totalRiskOfLowestRiskPath(): Long {
         val start = 0 to 0
-        table[start] = table[start]!!.copy(known = true, cost = 0)
+        table[start] = table[start]!!.copy(cost = 0)
         start.updateCosts(neighbours = start.neighbours())
 
-        while (table.anyUnknown()) {
-            val from = table.cheapestUnknownVertex()
-            from.updateCosts(neighbours = from.neighbours())
-            table[from] = table[from]!!.copy(known = true)
+        while (cheapestUnknownVertices.isNotEmpty() || table.anyUnknown()) {
+            val from = when (cheapestUnknownVertices.isNotEmpty()) {
+                true -> cheapestUnknownVertices.poll().first
+                false -> table.entries.first { (v, djikstraData) -> !djikstraData.known }.key
+            }
+            if (table[from]!!.known) {
+                continue
+            }
+            val neighbours = from.neighbours()
+            from.updateCosts(neighbours = neighbours)
         }
 
         return table[lastIndexX to lastIndexY]!!.cost
@@ -58,10 +69,13 @@ private data class Matrix(val raw: List<List<Int>>) {
         val startCost = table[this]!!.cost
         neighbours.forEach { vertex ->
             val cost = vertex.cost().toLong() + startCost
-            if (table[vertex]!!.cost > cost) {
-                table[vertex] = table[vertex]!!.copy(cost = cost, path = this)
+            val djikstraData = table[vertex]!!
+            if (djikstraData.cost > cost) {
+                cheapestUnknownVertices.add(vertex to cost)
+                table[vertex] = djikstraData.copy(cost = cost, path = this)
             }
         }
+        table[this] = table[this]!!.copy(known = true)
     }
 
     private fun Pair<Int, Int>.cost(): Int {
@@ -76,10 +90,6 @@ private data class Matrix(val raw: List<List<Int>>) {
     }
 
     private fun Map<Pair<Int, Int>, DjikstraData>.anyUnknown() = !values.all { it.known }
-
-    private fun Map<Pair<Int, Int>, DjikstraData>.cheapestUnknownVertex(): Pair<Int, Int> {
-        return entries.first { (_, data) -> !data.known }.key
-    }
 
     private data class DjikstraData(
         val known: Boolean,
